@@ -1,22 +1,32 @@
 ﻿#include "Memory.h"
 
 #define INVALID_PTR ((void *)0xFFFFFFFF)
+#define True 1
+#define False 0
 
 #define BLOCK_NUM (MemSize / BLOCK_SIZE)
 #define BLOCK_LIST_LEN (BLOCK_NUM / 4)
 
 const uint16_t _BlockNum = BLOCK_NUM;
 const uint16_t _BlockListLen = BLOCK_LIST_LEN;
+uint16_t _usage;
+uint8_t _memChanged = True;
 
-/** bit 0 位表示是否空闲, bit 1 表示块的开始
-*
-*    [ 11 01 01 11 ][ 01 01 00 00 ]
-*
-* bit  10
-*
-*    |----byte-0---||----byte-1---|
-*/
+/**
+ * Block list 
+ * 
+ * 位 0 表示块是否空闲, 位 1 表示块的开始
+ *
+ * [ 11 01 01 11 ][ 01 01 00 00 ]
+ * 
+ * |----byte 0---||----byte 1---|
+ * 
+ */
 uint8_t _blockInfo[BLOCK_LIST_LEN];
+
+/**
+ * Memory buffer
+*/
 int8_t _mBuf[MemSize];
 
 //--------------------
@@ -59,7 +69,7 @@ void *malloc(unsigned int size)
                 break;
         }
 
-        if (n >= blockEndIndex)
+        if (n == blockEndIndex) // found free blocks
         {
             _SetBlockFlag(blockIndex, BLOCK_FLAG_OCCUPY | BLOCK_FLAG_START);
 
@@ -67,12 +77,13 @@ void *malloc(unsigned int size)
             {
                 _SetBlockFlag(n, BLOCK_FLAG_OCCUPY);
             }
+
+            _memChanged = True;
+
             return (void *)(_mBuf + (uint32_t)blockIndex * BLOCK_SIZE);
         }
-        else
-        {
-            blockIndex = n + 1;
-        }
+
+        blockIndex = n + 1;
     }
 
     // error !, out of memory
@@ -94,14 +105,14 @@ void free(void *ptr)
         blockIndex = addr / BLOCK_SIZE;
 
         if (!_CheckBlockFlag(blockIndex, BLOCK_FLAG_START))
-        {
             return;
-        }
 
         do
         {
             _ClearBlockFlag(blockIndex, BLOCK_FLAG_START | BLOCK_FLAG_OCCUPY);
         } while (++blockIndex < _BlockNum && !_CheckBlockFlag(blockIndex, BLOCK_FLAG_START));
+
+        _memChanged = True;
     }
 }
 
@@ -128,20 +139,25 @@ void *realloc(void *ptr, unsigned int size)
 float MemUsage(void)
 {
     uint16_t i, j;
-    uint16_t usage = 0;
 
-    for (i = 0; i < _BlockListLen; i++)
+    if (_memChanged)
     {
-        uint8_t cBlockInfo = _blockInfo[i];
-        for (j = 0; j < 4; j++)
+        _memChanged = False;
+        _usage = 0;
+
+        for (i = 0; i < _BlockListLen; i++)
         {
-            if (cBlockInfo & 0x1) // block in used
+            uint8_t cBlockInfo = _blockInfo[i];
+            for (j = 0; j < 4; j++)
             {
-                usage++;
+                if (cBlockInfo & 0x1) // block in used
+                {
+                    _usage++;
+                }
+                cBlockInfo >>= 2;
             }
-            cBlockInfo >>= 2;
         }
     }
 
-    return usage / (float)_BlockNum;
+    return _usage / (float)_BlockNum;
 }

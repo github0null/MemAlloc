@@ -22,7 +22,7 @@ extern "C" {
 /**
  * Heap Size
 */
-#define MemSize MEM_SIZE_64K
+#define MemSize MEM_SIZE_32K
 
 /**
  * Block Size
