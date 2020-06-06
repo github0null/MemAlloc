@@ -27,7 +27,7 @@ uint8_t _blockInfo[BLOCK_LIST_LEN];
 /**
  * Memory buffer
 */
-int8_t _mBuf[MemSize];
+uint8_t _mBuf[MemSize];
 
 //--------------------
 
@@ -87,7 +87,7 @@ void *malloc(unsigned int size)
     }
 
     // error !, out of memory
-    HandleError();
+    ErrorHandler(MEM_ERR_OUT_OF_MEMORY);
 
     return INVALID_PTR;
 }
@@ -98,19 +98,30 @@ void free(void *ptr)
     uint16_t blockIndex;
 
     if (((uint32_t)ptr < (uint32_t)_mBuf) || (addr >= MemSize))
+    {
+        // error !, invalid ptr
+        ErrorHandler(MEM_ERR_INVALID_PTR);
         return;
+    }
 
     if (addr % BLOCK_SIZE == 0)
     {
         blockIndex = addr / BLOCK_SIZE;
 
         if (!_CheckBlockFlag(blockIndex, BLOCK_FLAG_START))
+        {
+            // error !, invalid block ptr
+            ErrorHandler(MEM_ERR_INVALID_HEAD_PTR);
             return;
+        }
 
         do
         {
+            // free block
             _ClearBlockFlag(blockIndex, BLOCK_FLAG_START | BLOCK_FLAG_OCCUPY);
-        } while (++blockIndex < _BlockNum && !_CheckBlockFlag(blockIndex, BLOCK_FLAG_START));
+
+        } while (++blockIndex < _BlockNum && !_CheckBlockFlag(blockIndex, BLOCK_FLAG_START) &&
+                 _CheckBlockFlag(blockIndex, BLOCK_FLAG_OCCUPY));
 
         _memChanged = True;
     }
@@ -132,8 +143,53 @@ void *calloc(unsigned int nmemb, unsigned int size)
 
 void *realloc(void *ptr, unsigned int size)
 {
-    free(ptr);
-    return malloc(size);
+    void *newPtr = malloc(size);
+    if (newPtr == INVALID_PTR)
+    {
+        free(ptr);
+        return INVALID_PTR;
+    }
+
+    uint32_t addr = (uint32_t)ptr - (uint32_t)_mBuf;
+    uint16_t blockIndex, fillIndex = 0;
+
+    if (((uint32_t)ptr < (uint32_t)_mBuf) || (addr >= MemSize) || (addr % BLOCK_SIZE != 0))
+    {
+        // error !, invalid ptr
+        ErrorHandler(MEM_ERR_INVALID_PTR);
+        free(ptr);
+        free(newPtr);
+        return INVALID_PTR;
+    }
+
+    blockIndex = addr / BLOCK_SIZE;
+
+    if (!_CheckBlockFlag(blockIndex, BLOCK_FLAG_START))
+    {
+        // error !, invalid block ptr
+        ErrorHandler(MEM_ERR_INVALID_HEAD_PTR);
+        free(ptr);
+        free(newPtr);
+        return INVALID_PTR;
+    }
+
+    do
+    {
+        // free block
+        _ClearBlockFlag(blockIndex, BLOCK_FLAG_START | BLOCK_FLAG_OCCUPY);
+
+        // copy old value to new location
+        for (int16_t i = 0; i < BLOCK_SIZE; i++, fillIndex++)
+        {
+            ((uint8_t *)newPtr)[fillIndex] = _mBuf[(blockIndex * BLOCK_SIZE) + i];
+        }
+
+    } while (++blockIndex < _BlockNum && !_CheckBlockFlag(blockIndex, BLOCK_FLAG_START) &&
+             _CheckBlockFlag(blockIndex, BLOCK_FLAG_OCCUPY));
+
+    _memChanged = True;
+
+    return newPtr;
 }
 
 float MemUsage(void)
