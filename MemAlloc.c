@@ -1,4 +1,4 @@
-﻿#include "Memory.h"
+﻿#include <MemAlloc.h>
 
 #define INVALID_PTR ((void *)0xFFFFFFFF)
 #define True 1
@@ -54,7 +54,7 @@ __STATIC_INLINE void _ClearBlockFlag(uint16_t index, uint8_t flag)
 
 //----------------------------------------
 
-void *malloc(unsigned int size)
+void *Mem_Alloc(unsigned int size)
 {
     uint16_t assignNum = (uint16_t)((size / BLOCK_SIZE) + ((size % BLOCK_SIZE) == 0U ? 0U : 1U));
     uint16_t blockIndex, blockEndIndex, _border = _BlockNum - assignNum, n;
@@ -87,12 +87,12 @@ void *malloc(unsigned int size)
     }
 
     // error !, out of memory
-    ErrorHandler(MEM_ERR_OUT_OF_MEMORY);
+    Mem_ErrorHandler(MEM_ERR_OUT_OF_MEMORY);
 
     return INVALID_PTR;
 }
 
-void free(void *ptr)
+void Mem_Free(void *ptr)
 {
     uint32_t addr = (uint32_t)ptr - (uint32_t)_mBuf;
     uint16_t blockIndex;
@@ -100,7 +100,7 @@ void free(void *ptr)
     if (((uint32_t)ptr < (uint32_t)_mBuf) || (addr >= MemSize))
     {
         // error !, invalid ptr
-        ErrorHandler(MEM_ERR_INVALID_PTR);
+        Mem_ErrorHandler(MEM_ERR_INVALID_PTR);
         return;
     }
 
@@ -111,7 +111,7 @@ void free(void *ptr)
         if (!_CheckBlockFlag(blockIndex, BLOCK_FLAG_START))
         {
             // error !, invalid block ptr
-            ErrorHandler(MEM_ERR_INVALID_HEAD_PTR);
+            Mem_ErrorHandler(MEM_ERR_INVALID_HEAD_PTR);
             return;
         }
 
@@ -127,7 +127,7 @@ void free(void *ptr)
     }
 }
 
-void *calloc(unsigned int nmemb, unsigned int size)
+void *Mem_Calloc(unsigned int nmemb, unsigned int size)
 {
     uint32_t _size = nmemb * size, i = 0;
     void *ptr = malloc(_size);
@@ -141,7 +141,7 @@ void *calloc(unsigned int nmemb, unsigned int size)
     return ptr;
 }
 
-void *realloc(void *ptr, unsigned int size)
+void *Mem_Realloc(void *ptr, unsigned int size)
 {
     void *newPtr = malloc(size);
     if (newPtr == INVALID_PTR)
@@ -156,7 +156,7 @@ void *realloc(void *ptr, unsigned int size)
     if (((uint32_t)ptr < (uint32_t)_mBuf) || (addr >= MemSize) || (addr % BLOCK_SIZE != 0))
     {
         // error !, invalid ptr
-        ErrorHandler(MEM_ERR_INVALID_PTR);
+        Mem_ErrorHandler(MEM_ERR_INVALID_PTR);
         free(ptr);
         free(newPtr);
         return INVALID_PTR;
@@ -167,7 +167,7 @@ void *realloc(void *ptr, unsigned int size)
     if (!_CheckBlockFlag(blockIndex, BLOCK_FLAG_START))
     {
         // error !, invalid block ptr
-        ErrorHandler(MEM_ERR_INVALID_HEAD_PTR);
+        Mem_ErrorHandler(MEM_ERR_INVALID_HEAD_PTR);
         free(ptr);
         free(newPtr);
         return INVALID_PTR;
@@ -192,7 +192,7 @@ void *realloc(void *ptr, unsigned int size)
     return newPtr;
 }
 
-float MemUsage(void)
+float Mem_GetUsage(void)
 {
     uint16_t i, j;
 

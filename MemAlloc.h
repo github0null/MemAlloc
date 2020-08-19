@@ -73,17 +73,15 @@ extern "C" {
 #define MEM_ERR_INVALID_PTR 2
 #define MEM_ERR_INVALID_HEAD_PTR 3
 
-#ifdef NOT_HANDLE_ERROR
-#define ErrorHandler(errCode)
-#else
-#define ErrorHandler(errCode) __breakpoint(0)
+#ifndef Mem_ErrorHandler
+#define Mem_ErrorHandler(errCode) __BKPT(0)
 #endif
 
-void *malloc(unsigned int size);
-void free(void *ptr);
-void *calloc(unsigned int nmemb, unsigned int size);
-void *realloc(void *ptr, unsigned int size);
-float MemUsage(void);
+void *Mem_Alloc(unsigned int size);
+void Mem_Free(void *ptr);
+void *Mem_Calloc(unsigned int nmemb, unsigned int size);
+void *Mem_Realloc(void *ptr, unsigned int size);
+float Mem_GetUsage(void);
 
 #ifdef __cplusplus
 }
