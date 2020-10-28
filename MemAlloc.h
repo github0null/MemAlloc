@@ -55,7 +55,8 @@ extern "C" {
 #define MemSize MEM_SIZE_128K
 #define BLOCK_SIZE 32U
 #else
-#define MemSize MEM_SIZE_16K
+#warning "Not specified HEAP_SIZE !, Use Default Size: 8K Bytes"
+#define MemSize MEM_SIZE_8K
 #endif
 
 /**
