@@ -130,7 +130,7 @@ void Mem_Free(void *ptr)
 void *Mem_Calloc(unsigned int nmemb, unsigned int size)
 {
     uint32_t _size = nmemb * size, i = 0;
-    void *ptr = malloc(_size);
+    void *ptr = Mem_Alloc(_size);
 
     if (ptr != INVALID_PTR)
     {
@@ -143,10 +143,10 @@ void *Mem_Calloc(unsigned int nmemb, unsigned int size)
 
 void *Mem_Realloc(void *ptr, unsigned int size)
 {
-    void *newPtr = malloc(size);
+    void *newPtr = Mem_Alloc(size);
     if (newPtr == INVALID_PTR)
     {
-        free(ptr);
+        Mem_Free(ptr);
         return INVALID_PTR;
     }
 
@@ -157,8 +157,8 @@ void *Mem_Realloc(void *ptr, unsigned int size)
     {
         // error !, invalid ptr
         Mem_ErrorHandler(MEM_ERR_INVALID_PTR);
-        free(ptr);
-        free(newPtr);
+        Mem_Free(ptr);
+        Mem_Free(newPtr);
         return INVALID_PTR;
     }
 
@@ -168,8 +168,8 @@ void *Mem_Realloc(void *ptr, unsigned int size)
     {
         // error !, invalid block ptr
         Mem_ErrorHandler(MEM_ERR_INVALID_HEAD_PTR);
-        free(ptr);
-        free(newPtr);
+        Mem_Free(ptr);
+        Mem_Free(newPtr);
         return INVALID_PTR;
     }
 
